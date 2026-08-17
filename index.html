@@ -64,7 +64,7 @@
  .err{color:var(--no);font-size:13px;text-align:center;margin-top:8px;min-height:18px;font-weight:bold;}
  /* ===== DOCUMENTO IMPRESO (matriz igual al Excel) ===== */
  #impreso{display:none;}
- #impreso.render{display:block;position:fixed;left:-10000px;top:0;width:1090px;background:#fff;padding:6px;}
+ #impreso.render{display:block;position:absolute;left:0;top:0;width:1090px;background:#fff;padding:6px;z-index:1;}
  .doc{color:#000;font-size:9px;}
  .dhead{display:flex;align-items:center;border:1px solid #000;}
  .dhead .dl{width:150px;padding:4px 6px;border-right:1px solid #000;text-align:center;}
@@ -325,19 +325,36 @@ function validar(){
  err.textContent='';
  return {ok:true, placa:placa.toUpperCase(), fecha};
 }
+// ----- Esperar a que las imágenes del documento estén listas -----
+function esperarImagenes(el){
+ const imgs=[...el.querySelectorAll('img')];
+ return Promise.all(imgs.map(img=>{
+   if(img.complete && img.naturalWidth>0) return Promise.resolve();
+   return new Promise(res=>{ img.onload=res; img.onerror=res; });
+ }));
+}
 // ----- Generar el PDF como archivo (para compartir) -----
 async function generarPDFblob(placa, fecha){
  const imp=document.getElementById('impreso');
+ // capa blanca para tapar el parpadeo mientras se dibuja
+ const ov=document.createElement('div');
+ ov.style.cssText='position:fixed;inset:0;background:#fff;z-index:99999;';
+ document.body.appendChild(ov);
  imp.classList.add('render');
+ window.scrollTo(0,0);
+ // esperar imágenes (logo + foto) y dos cuadros de render
+ await esperarImagenes(imp);
+ await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+ await new Promise(r=>setTimeout(r,300));
  const nombre = placa.replace(/\s+/g,'') + '_' + fecha + '.pdf';
  const opt={ margin:5, filename:nombre, image:{type:'jpeg',quality:0.98},
-   html2canvas:{scale:2, useCORS:true, backgroundColor:'#ffffff', windowWidth:1090},
+   html2canvas:{scale:2, useCORS:true, backgroundColor:'#ffffff', windowWidth:1090, scrollX:0, scrollY:0, logging:false},
    jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},
    pagebreak:{mode:['css','legacy']} };
  try{
    const blob = await html2pdf().set(opt).from(imp).outputPdf('blob');
    return {blob, nombre};
- } finally { imp.classList.remove('render'); }
+ } finally { imp.classList.remove('render'); ov.remove(); }
 }
 // ----- Botón: Generar y compartir -----
 document.getElementById('btnShare').addEventListener('click', async ()=>{
@@ -345,7 +362,6 @@ document.getElementById('btnShare').addEventListener('click', async ()=>{
  const err=document.getElementById('err');
  err.style.color='#666'; err.textContent='Generando PDF...';
  construirImpreso();
- await new Promise(r=>setTimeout(r,80));
  try{
    if(typeof html2pdf==='undefined') throw new Error('sin-libreria');
    const {blob, nombre}=await generarPDFblob(v.placa, v.fecha);
