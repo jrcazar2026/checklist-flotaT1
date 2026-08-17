@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Inspeccion Diaria de Flota</title>
+<style>
+ :root{
+   --rojo:#D3222A; --rojo-osc:#A81820; --gris:#4a4a4a; --linea:#c9c9c9;
+   --ok:#1e7d34; --no:#c62828; --na:#616161; --bg:#eef0f2;
+ }
+ *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+ html,body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;color:#1c1c1c;background:var(--bg);}
+ .wrap{max-width:820px;margin:0 auto;background:#fff;}
+ /* ===== PANTALLA (interfaz amigable) ===== */
+ .aviso{background:#fff8e1;border-bottom:1px solid #e6d38a;padding:12px 16px;font-size:13px;line-height:1.4;color:#5b4b12;}
+ .aviso b{color:#7a5c00;}
+ .cabecera{display:flex;align-items:center;gap:12px;border:2px solid #000;border-bottom:none;padding:8px 12px;background:#fff;}
+ .cabecera img{height:44px;width:auto;}
+ .cab-txt{flex:1;text-align:center;}
+ .cab-txt .t{color:var(--rojo);font-weight:bold;font-size:17px;letter-spacing:.5px;}
+ .cab-txt .c{font-size:10px;color:#666;}
+ .meta{display:grid;grid-template-columns:1fr 1fr;gap:0;border:2px solid #000;border-top:none;border-bottom:none;}
+ .meta .celda{border-right:1px solid #000;border-bottom:1px solid #000;padding:6px 8px;font-size:12px;}
+ .meta .celda:nth-child(2n){border-right:none;}
+ .meta label{font-weight:bold;display:block;margin-bottom:2px;color:var(--gris);font-size:11px;}
+ .meta input{width:100%;border:none;border-bottom:1px solid var(--linea);font-size:14px;padding:4px 2px;outline:none;background:transparent;font-family:inherit;}
+ .meta input:focus{border-bottom:2px solid var(--rojo);}
+ .tipo-btns{display:flex;gap:6px;margin-top:2px;}
+ .tipo-btns .tb{flex:1;text-align:center;border:1px solid #999;border-radius:4px;padding:6px;font-size:13px;font-weight:bold;color:#666;cursor:pointer;background:#fafafa;}
+ .tipo-btns .tb.sel{background:var(--rojo);color:#fff;border-color:var(--rojo);}
+ .criterios{grid-column:1 / -1;border-bottom:1px solid #000;padding:6px 8px;font-size:11px;background:#f5f5f5;}
+ .criterios b{color:var(--rojo-osc);}
+ .secc{background:#222;color:#fff;text-align:center;font-weight:bold;font-size:13px;padding:7px;border-left:2px solid #000;border-right:2px solid #000;letter-spacing:.5px;}
+ .items{border:2px solid #000;border-top:none;}
+ .item{display:grid;grid-template-columns:1fr 168px;align-items:center;border-bottom:1px solid var(--linea);}
+ .item:last-child{border-bottom:none;}
+ .item .txt{padding:8px 10px;font-size:12.5px;line-height:1.3;}
+ .item .txt .num{display:inline-block;min-width:20px;font-weight:bold;color:var(--rojo);}
+ .item .txt .solo{color:#b26a00;font-size:11px;font-style:italic;}
+ .opts{display:flex;gap:4px;padding:6px 8px;}
+ .opts .o{flex:1;text-align:center;border:1.5px solid #bbb;border-radius:5px;padding:8px 0;font-size:13px;font-weight:bold;color:#888;cursor:pointer;user-select:none;background:#fafafa;min-width:38px;}
+ .opts .o.sel[data-v="1"]{background:var(--ok);color:#fff;border-color:var(--ok);}
+ .opts .o.sel[data-v="X"]{background:var(--no);color:#fff;border-color:var(--no);}
+ .opts .o.sel[data-v="NA"]{background:var(--na);color:#fff;border-color:var(--na);}
+ .item.pendiente .opts .o{border-color:#e0a3a3;}
+ .bloque{border:2px solid #000;border-top:none;padding:10px;}
+ .bloque h3{margin:0 0 6px;font-size:12px;color:var(--gris);text-transform:uppercase;letter-spacing:.5px;}
+ textarea{width:100%;min-height:56px;border:1px solid var(--linea);border-radius:4px;padding:8px;font-family:inherit;font-size:13px;resize:vertical;outline:none;}
+ textarea:focus{border-color:var(--rojo);}
+ .firmas{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+ .firma-box{border:1px solid var(--linea);border-radius:6px;padding:8px;}
+ .firma-box .lbl{font-size:11px;color:var(--gris);font-weight:bold;margin-bottom:4px;text-transform:uppercase;}
+ canvas.firma{width:100%;height:110px;border:1px dashed #bbb;border-radius:4px;background:#fff;touch-action:none;display:block;}
+ .mini{font-size:11px;color:var(--rojo);cursor:pointer;margin-top:4px;display:inline-block;}
+ .foto-box{margin-top:6px;}
+ .foto-box input[type=file]{display:none;}
+ .btn-foto{display:block;text-align:center;border:2px dashed var(--rojo);color:var(--rojo);border-radius:8px;padding:16px;font-weight:bold;font-size:14px;cursor:pointer;background:#fff5f5;}
+ .foto-prev{margin-top:8px;text-align:center;}
+ .foto-prev img{max-width:100%;max-height:280px;border-radius:6px;border:1px solid var(--linea);}
+ .acciones{padding:16px;background:var(--bg);position:sticky;bottom:0;border-top:1px solid #ddd;}
+ .generar{width:100%;background:var(--rojo);color:#fff;border:none;border-radius:10px;padding:16px;font-size:16px;font-weight:bold;cursor:pointer;box-shadow:0 3px 8px rgba(211,34,42,.3);}
+ .generar:active{background:var(--rojo-osc);}
+ .err{color:var(--no);font-size:13px;text-align:center;margin-top:8px;min-height:18px;font-weight:bold;}
+ /* ===== DOCUMENTO IMPRESO (matriz igual al Excel) ===== */
+ #impreso{display:none;}
+ #impreso.render{display:block;position:fixed;left:-10000px;top:0;width:1090px;background:#fff;padding:6px;}
+ .doc{color:#000;font-size:9px;}
+ .dhead{display:flex;align-items:center;border:1px solid #000;}
+ .dhead .dl{width:150px;padding:4px 6px;border-right:1px solid #000;text-align:center;}
+ .dhead .dl img{max-width:100%;max-height:38px;}
+ .dhead .dt{flex:1;text-align:center;font-weight:bold;font-size:15px;letter-spacing:.5px;}
+ .dhead .dc{width:150px;padding:4px 6px;border-left:1px solid #000;text-align:center;font-size:9px;font-weight:bold;}
+ .dmeta{width:100%;border-collapse:collapse;}
+ .dmeta td{border:1px solid #000;padding:3px 6px;font-size:10px;vertical-align:middle;}
+ .dmeta .k{font-weight:bold;background:#f2f2f2;white-space:nowrap;}
+ .dmeta .crit{font-size:8.5px;background:#f7f7f7;}
+ .dmeta .crit b{color:#000;}
+ .dband{border:1px solid #000;border-top:none;background:#222;color:#fff;text-align:center;font-weight:bold;padding:4px;letter-spacing:.5px;}
+ .dmatrix{width:100%;border-collapse:collapse;table-layout:fixed;}
+ .dmatrix th,.dmatrix td{border:1px solid #000;text-align:center;vertical-align:middle;}
+ .dmatrix thead th{background:#f2f2f2;font-size:7.5px;padding:3px 1px;vertical-align:bottom;}
+ .dmatrix .vh span{writing-mode:vertical-rl;transform:rotate(180deg);white-space:normal;display:inline-block;line-height:1.25;font-weight:normal;max-height:150px;text-align:left;}
+ .dmatrix .h-dia{width:22px;}
+ .dmatrix .h-cond{width:74px;}
+ .dmatrix .h-item{width:28px;}
+ .dmatrix .h-obs{width:88px;}
+ .dmatrix .h-fir{width:66px;}
+ .dmatrix tbody td{height:64px;font-size:11px;font-weight:bold;}
+ .dmatrix .c-cond,.dmatrix .c-obs{font-size:9px;font-weight:normal;text-align:left;padding:3px;vertical-align:top;}
+ .dmatrix .c-fir img{max-width:100%;max-height:60px;}
+ .danexo{margin-top:8px;border:1px solid #000;padding:6px;text-align:center;page-break-before:always;}
+ .danexo .at{font-weight:bold;font-size:12px;margin-bottom:6px;text-align:left;border-bottom:1px solid #000;padding-bottom:4px;}
+ .danexo img{max-width:100%;max-height:170mm;}
+ @media print{
+   @page{size:A4 landscape;margin:6mm;}
+   body{background:#fff;}
+   .aviso,.cabecera,.meta,.secc,.items,.bloque,.acciones{display:none !important;}
+   #impreso{display:block !important;}
+   .dhead,.dband,.dmeta .k,.dmatrix thead th,.danexo{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+   .doc{page-break-inside:auto;}
+   .dmatrix tr{page-break-inside:avoid;}
+ }
+</style>
+</head>
+<body>
+<div class="wrap">
+<!-- ================= INTERFAZ (PANTALLA) ================= -->
+<div class="aviso">
+<b>Chofer:</b> completa cada punto (1 cumple / X no cumple / N/A no aplica), escribe observaciones, firma, toma la foto del camión y toca
+<b>“Generar PDF”</b>. En la ventana de impresión elige <b>“Guardar como PDF”</b> y compártelo a Logística.
+</div>
+<div class="cabecera">
+<div class="cab-txt">
+<div class="t">INSPECCIÓN DIARIA DE FLOTA</div>
+</div>
+</div>
+<div class="meta">
+<div class="celda"><label>CEDI</label><input id="cedi" type="text" placeholder="Centro de distribución"></div>
+<div class="celda"><label>FECHA</label><input id="fecha" type="date"></div>
+<div class="celda"><label>PLACA</label><input id="placa" type="text" placeholder="PBA-1234" style="text-transform:uppercase"></div>
+<div class="celda"><label>CONDUCTOR</label><input id="conductor" type="text" placeholder="Nombre y apellido"></div>
+<div class="celda">
+<label>TIPO</label>
+<div class="tipo-btns">
+<div class="tb" data-tipo="PROPIO">PROPIO</div>
+<div class="tb" data-tipo="FLETERO">FLETERO</div>
+</div>
+</div>
+<div class="celda"><label>DÍA DEL MES</label><input id="dia" type="text" readonly style="background:#f5f5f5"></div>
+<div class="criterios"><b>CRITERIOS DE LLENADO:</b> &nbsp; 1 = SÍ CUMPLE &nbsp;•&nbsp; X = NO CUMPLE &nbsp;•&nbsp; N/A = NO APLICA</div>
+</div>
+<div class="secc">IMPERDONABLES DE SEGURIDAD</div>
+<div class="items" id="items"></div>
+<div class="bloque">
+<h3>Observaciones al inicio de jornada</h3>
+<textarea id="obs_ini" placeholder="Novedades al iniciar..."></textarea>
+<div class="firmas" style="margin-top:10px">
+<div class="firma-box">
+<div class="lbl">Firma conductor — Inicio</div>
+<canvas class="firma" id="firma_ini"></canvas>
+<span class="mini" data-clear="firma_ini">Borrar firma</span>
+</div>
+<div class="firma-box">
+<div class="lbl">Firma conductor — Final</div>
+<canvas class="firma" id="firma_fin"></canvas>
+<span class="mini" data-clear="firma_fin">Borrar firma</span>
+</div>
+</div>
+</div>
+<div class="bloque">
+<h3>Observaciones al final de jornada</h3>
+<textarea id="obs_fin" placeholder="Novedades al finalizar..."></textarea>
+</div>
+<div class="bloque">
+<h3>Fotografía del vehículo</h3>
+<div class="foto-box">
+<label class="btn-foto" for="foto">📷 Tomar foto del camión</label>
+<input id="foto" type="file" accept="image/*" capture="environment">
+<div class="foto-prev" id="foto_prev"></div>
+</div>
+</div>
+<div class="acciones">
+<button class="generar" id="btnShare">Generar y compartir PDF</button>
+<div class="err" id="err"></div>
+<div style="text-align:center;margin-top:10px">
+<span id="btnPrint" style="font-size:12px;color:var(--rojo);cursor:pointer;text-decoration:underline">o generar versión imprimible</span>
+</div>
+</div>
+<!-- ================= DOCUMENTO IMPRESO (se arma solo) ================= -->
+<div id="impreso"></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+const PUNTOS = [
+ "Llantas en buen estado y con labrado",
+ "Freno pedal, mano, aire en buen estado",
+ "Estado del parabrisas (al menos 70% en buen estado), limpiaparabrisas y aspersores",
+ "Espejos retrovisores en buen estado (incluidos puntos ciegos), correctamente ajustados",
+ "Ausencia de fugas de líquidos (frenos, aceite, combustible, refrigerante)",
+ "Luces de freno / medias, altas, reverso e intermitentes en buen estado",
+ "Dirección en buen estado (no suelta y sin daños)",
+ "Pitos, alarma de reversa en buen estado",
+ "Thermoking en buen estado |Solo Dipor",
+ "Furgón/Castillo/Contenedor/Arrastre/Carga segura y en buen estado (puertas)",
+ "Reflectivos y luces externas en buen estado",
+ "Extintor presurizado, botiquín, triángulo o cono",
+ "Kit Antiderrames |Solo T1",
+ "Escalerilla/estribos/pisaderas en buen estado",
+ "Topes en buen estado",
+ "Cinturón de seguridad para todos los ocupantes en buen estado",
+ "Se revisó la carga para evitar material suelto y almacenamiento seguro",
+ "Chequeo 360°"
+];
+const LOGO = "data:image/png;base64,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";
+// ----- Render puntos (interfaz) -----
+const cont = document.getElementById('items');
+PUNTOS.forEach((p,i)=>{
+ const [texto, solo] = p.split('|');
+ const soloTag = solo ? `<span class="solo"> (${solo})</span>` : '';
+ const row = document.createElement('div');
+ row.className='item'; row.dataset.idx=i;
+ row.innerHTML = `<div class="txt"><span class="num">${i+1}.</span> ${texto.trim()}${soloTag}</div>
+<div class="opts"><div class="o" data-v="1">1</div><div class="o" data-v="X">X</div><div class="o" data-v="NA">N/A</div></div>`;
+ cont.appendChild(row);
+});
+cont.addEventListener('click', e=>{
+ const o=e.target.closest('.o'); if(!o) return;
+ o.parentElement.querySelectorAll('.o').forEach(x=>x.classList.remove('sel'));
+ o.classList.add('sel'); o.closest('.item').classList.remove('pendiente');
+});
+document.querySelectorAll('.tb').forEach(b=>b.addEventListener('click',()=>{
+ document.querySelectorAll('.tb').forEach(x=>x.classList.remove('sel')); b.classList.add('sel');
+}));
+// ----- Fecha / dia / prefill por QR -----
+(function(){
+ const hoy=new Date();
+ document.getElementById('fecha').value=hoy.toISOString().slice(0,10);
+ document.getElementById('dia').value=hoy.getDate();
+ document.getElementById('fecha').addEventListener('change',e=>{
+   const d=new Date(e.target.value+'T00:00'); document.getElementById('dia').value=isNaN(d)?'':d.getDate();
+ });
+ const q=new URLSearchParams(location.search);
+ if(q.get('placa')) document.getElementById('placa').value=q.get('placa').toUpperCase();
+ if(q.get('cedi'))  document.getElementById('cedi').value=q.get('cedi');
+})();
+// ----- Foto -----
+let fotoData=null;
+document.getElementById('foto').addEventListener('change',e=>{
+ const f=e.target.files[0]; if(!f) return;
+ const r=new FileReader();
+ r.onload=ev=>{ fotoData=ev.target.result; document.getElementById('foto_prev').innerHTML=`<img src="${fotoData}" alt="Foto">`; };
+ r.readAsDataURL(f);
+});
+// ----- Firmas -----
+function initFirma(id){
+ const c=document.getElementById(id), ratio=window.devicePixelRatio||1, rect=c.getBoundingClientRect();
+ c.width=rect.width*ratio; c.height=rect.height*ratio;
+ const ctx=c.getContext('2d'); ctx.scale(ratio,ratio); ctx.lineWidth=2; ctx.lineCap='round'; ctx.strokeStyle='#111';
+ let d=false,px=0,py=0;
+ const pos=ev=>{const r=c.getBoundingClientRect(),t=ev.touches?ev.touches[0]:ev;return{x:t.clientX-r.left,y:t.clientY-r.top};};
+ const s=ev=>{d=true;const p=pos(ev);px=p.x;py=p.y;ev.preventDefault();};
+ const m=ev=>{if(!d)return;const p=pos(ev);ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(p.x,p.y);ctx.stroke();px=p.x;py=p.y;ev.preventDefault();};
+ const e=()=>d=false;
+ c.addEventListener('mousedown',s);c.addEventListener('mousemove',m);window.addEventListener('mouseup',e);
+ c.addEventListener('touchstart',s,{passive:false});c.addEventListener('touchmove',m,{passive:false});c.addEventListener('touchend',e);
+}
+initFirma('firma_ini'); initFirma('firma_fin');
+document.querySelectorAll('.mini').forEach(x=>x.addEventListener('click',()=>{
+ const c=document.getElementById(x.dataset.clear); c.getContext('2d').clearRect(0,0,c.width,c.height);
+}));
+// ----- Armar documento impreso (matriz igual al Excel) -----
+function valorPunto(i){
+ const it=document.querySelectorAll('.item')[i].querySelector('.o.sel');
+ return it? it.dataset.v.replace('NA','N/A') : '';
+}
+function firmaImg(id){
+ const c=document.getElementById(id);
+ // detectar si esta vacia
+ const blank=document.createElement('canvas'); blank.width=c.width; blank.height=c.height;
+ if(c.toDataURL()===blank.toDataURL()) return '';
+ return c.toDataURL('image/png');
+}
+function esc(s){return (s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function construirImpreso(){
+ const cedi=document.getElementById('cedi').value||'';
+ const fecha=document.getElementById('fecha').value||'';
+ const placa=(document.getElementById('placa').value||'').toUpperCase();
+ const cond=document.getElementById('conductor').value||'';
+ const dia=document.getElementById('dia').value||'';
+ const tipoSel=document.querySelector('.tb.sel'); const tipo=tipoSel?tipoSel.dataset.tipo:'';
+ const obsI=document.getElementById('obs_ini').value||'';
+ const obsF=document.getElementById('obs_fin').value||'';
+ const meses=['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+ let mes=''; if(fecha){const d=new Date(fecha+'T00:00'); mes=meses[d.getMonth()]+' '+d.getFullYear();}
+ // encabezados verticales
+ let ths='<th class="h-dia vh"><span>DÍA DEL MES</span></th><th class="h-cond vh"><span>NOMBRE DEL CONDUCTOR</span></th>';
+ PUNTOS.forEach(p=>{ ths+=`<th class="h-item vh"><span>${esc(p.replace('|',' - '))}</span></th>`; });
+ ths+='<th class="h-obs vh"><span>OBSERVACIONES AL INICIO JORNADA</span></th><th class="h-fir vh"><span>FIRMA CONDUCTOR</span></th>'
+    + '<th class="h-obs vh"><span>OBSERVACIONES AL FINAL JORNADA</span></th><th class="h-fir vh"><span>FIRMA CONDUCTOR</span></th>';
+ // fila de datos
+ let tds=`<td>${esc(dia)}</td><td class="c-cond">${esc(cond)}</td>`;
+ for(let i=0;i<PUNTOS.length;i++) tds+=`<td>${valorPunto(i)}</td>`;
+ const fI=firmaImg('firma_ini'), fF=firmaImg('firma_fin');
+ tds+=`<td class="c-obs">${esc(obsI)}</td><td class="c-fir">${fI?`<img src="${fI}">`:''}</td>`
+    + `<td class="c-obs">${esc(obsF)}</td><td class="c-fir">${fF?`<img src="${fF}">`:''}</td>`;
+ const anexo = fotoData ? `<div class="danexo"><div class="at">ANEXO FOTOGRÁFICO — ${esc(placa)} — ${esc(fecha)}</div><img src="${fotoData}"></div>` : '';
+ document.getElementById('impreso').innerHTML = `
+<div class="doc">
+<div class="dhead">
+<div class="dl"><img src="${LOGO}"></div>
+<div class="dt">INSPECCIÓN DIARIA DE FLOTA</div>
+<div class="dc">AEC-CHU-SI-SR-F-036</div>
+</div>
+<table class="dmeta">
+<tr>
+<td class="k">CEDI</td><td>${esc(cedi)}</td>
+<td class="k">TIPO</td><td>${tipo==='PROPIO'?'☑':'☐'} PROPIO &nbsp; ${tipo==='FLETERO'?'☑':'☐'} FLETERO</td>
+<td class="k">MES</td><td>${esc(mes)}</td>
+</tr>
+<tr>
+<td class="k">PLACA</td><td>${esc(placa)}</td>
+<td class="k">CONDUCTOR</td><td>${esc(cond)}</td>
+<td class="crit" colspan="2"><b>CRITERIOS DE LLENADO:</b> 1 = SÍ CUMPLE · X = NO CUMPLE · N/A = NO APLICA</td>
+</tr>
+</table>
+<div class="dband">IMPERDONABLES DE SEGURIDAD</div>
+<table class="dmatrix">
+<thead><tr>${ths}</tr></thead>
+<tbody><tr>${tds}</tr></tbody>
+</table>
+     ${anexo}
+</div>`;
+}
+// ----- Validación común -----
+function validar(){
+ const err=document.getElementById('err'); err.style.color='#c62828';
+ const placa=document.getElementById('placa').value.trim();
+ const fecha=document.getElementById('fecha').value;
+ if(!placa){ err.textContent='⚠ Ingresa la PLACA antes de generar.'; return {ok:false}; }
+ let faltan=0;
+ document.querySelectorAll('.item').forEach(it=>{ if(!it.querySelector('.o.sel')){it.classList.add('pendiente');faltan++;} });
+ if(faltan){ err.textContent=`⚠ Faltan ${faltan} punto(s) por marcar.`;
+   document.querySelector('.item.pendiente').scrollIntoView({behavior:'smooth',block:'center'}); return {ok:false}; }
+ err.textContent='';
+ return {ok:true, placa:placa.toUpperCase(), fecha};
+}
+// ----- Generar el PDF como archivo (para compartir) -----
+async function generarPDFblob(placa, fecha){
+ const imp=document.getElementById('impreso');
+ imp.classList.add('render');
+ const nombre = placa.replace(/\s+/g,'') + '_' + fecha + '.pdf';
+ const opt={ margin:5, filename:nombre, image:{type:'jpeg',quality:0.98},
+   html2canvas:{scale:2, useCORS:true, backgroundColor:'#ffffff', windowWidth:1090},
+   jsPDF:{unit:'mm',format:'a4',orientation:'landscape'},
+   pagebreak:{mode:['css','legacy']} };
+ try{
+   const blob = await html2pdf().set(opt).from(imp).outputPdf('blob');
+   return {blob, nombre};
+ } finally { imp.classList.remove('render'); }
+}
+// ----- Botón: Generar y compartir -----
+document.getElementById('btnShare').addEventListener('click', async ()=>{
+ const v=validar(); if(!v.ok) return;
+ const err=document.getElementById('err');
+ err.style.color='#666'; err.textContent='Generando PDF...';
+ construirImpreso();
+ await new Promise(r=>setTimeout(r,80));
+ try{
+   if(typeof html2pdf==='undefined') throw new Error('sin-libreria');
+   const {blob, nombre}=await generarPDFblob(v.placa, v.fecha);
+   const file=new File([blob], nombre, {type:'application/pdf'});
+   const texto=`Inspección diaria de flota — ${v.placa} — ${v.fecha}`;
+   if(navigator.canShare && navigator.canShare({files:[file]})){
+     await navigator.share({files:[file], title:nombre, text:texto});
+     err.textContent='';
+   }else{
+     const url=URL.createObjectURL(blob);
+     const a=document.createElement('a'); a.href=url; a.download=nombre;
+     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+     err.style.color='#666';
+     err.textContent='PDF descargado. Adjúntalo al grupo de WhatsApp de Logística.';
+   }
+ }catch(e){
+   err.style.color='#c62828';
+   err.textContent='No se pudo compartir aquí. Usa "versión imprimible".';
+ }
+});
+// ----- Botón: versión imprimible (respaldo) -----
+document.getElementById('btnPrint').addEventListener('click',()=>{
+ const v=validar(); if(!v.ok) return;
+ construirImpreso();
+ document.title = v.placa.replace(/\s+/g,'') + '_' + v.fecha;
+ setTimeout(()=>window.print(), 60);
+});
+</script>
+</body>
+</html>
